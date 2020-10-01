@@ -98,8 +98,136 @@ export abstract class Controller {
   }
 }
 
-export interface BasePlugin {
-  init: (config: JSONObject, context: any) => Promise<any> | any
+/**
+ * Type for handler attached to Kuzzle events. Either hooks or pipes.
+ */
+type EventHandler = (...payload: any) => Promise<any> | any
+
+/**
+ * Plugins must implements this interface.
+ */
+export abstract class BasePlugin {
+  /**
+   * Plugin context.
+   *
+   * Must be set in the plugin init() method before use
+   */
+  protected context?: any;
+
+  /**
+   * Plugin config
+   */
+  protected config?: JSONObject;
+
+  /**
+   * Define new API controllers within this object
+   */
+  public api?: {
+    /**
+     * Name of the API controller.
+     *
+     * It will be prefixed with the plugin name: <plugin-name>/<controller-name>
+     */
+    [controller: string]: ControllerDefinition
+  }
+
+  /**
+   * Define new API controllers within this object.
+   *
+   * @deprecated you should use this.api instead
+   */
+  public controllers?: {
+    /**
+     * Name of the API controller.
+     *
+     * It will be prefixed with the plugin name: <plugin-name>/<controller-name>.
+     */
+    [controller: string]: {
+      /**
+       * Name of the API action.
+       */
+      [action: string]: ((request: Request) => Promise<any>) | string
+    }
+  }
+
+  /**
+   * Define hooks on Kuzzle events within this object.
+   */
+  public hooks?: {
+    /**
+     * Event name or wildcard event.
+     */
+    [event: string]: EventHandler[] | EventHandler
+  }
+
+  /**
+   * Define pipes on Kuzzle events within this object.
+   */
+  public pipes?: {
+    /**
+     * Event name or wildcard event.
+     */
+    [event: string]: EventHandler[] | EventHandler
+  }
+
+  /**
+   * Define authenticator classes used by strategies within this object.
+   *
+   * @see https://docs.kuzzle.io/core/2/plugins/guides/strategies/overview
+   */
+  public authenticators?: {
+    /**
+     * The key is the authenticator name and the value is the class.
+     */
+    [name: string]: any
+  }
+
+  /**
+   * Define authentications strategies within this object.
+   *
+   * @see https://docs.kuzzle.io/core/2/plugins/guides/strategies/overview
+   */
+  public strategies?: {
+    /**
+     * Strategy name and definition.
+     */
+    [name: string]: {
+      /**
+       * Strategy configuration.
+       */
+      config: {
+        /**
+         * Name of a registered authenticator to use with this strategy.
+         */
+        authenticator: string,
+        [key: string]: any
+      },
+      /**
+       * Strategy methods.
+       *
+       * Each method must be exposed by the plugin
+       * under the same name as specified.
+       */
+      methods: {
+        create: string,
+        delete: string,
+        exists: string,
+        getById: string,
+        getInfo: string,
+        update: string,
+        validate: string,
+        verify: string,
+      }
+    }
+  }
+
+  /**
+   * Plugin initialization method.
+   *
+   * Will be called during plugin initialization before Kuzzle starts to serve
+   * requests.
+   */
+  abstract init (config: JSONObject, context: any): Promise<any> | any
 }
 
 /**
